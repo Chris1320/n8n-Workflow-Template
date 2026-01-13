@@ -1,0 +1,98 @@
+{
+  "name": "n8n Workflow Template",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "/**\n * Print a message with a name and age.\n * @param {string} name A name.\n * @param {number} age An age.\n * @returns {string} A message containing the name and age.\n */\nfunction main(name, age) {\n    const /** @type {import(\"./types/SampleCodeTypes\").Person} */ person = { name: name, age: age };\n    const /** @type {string} */ result = `${person.name} is ${person.age} years old.`;\n    return result;\n}\n\n// @ts-ignore this comes from a previous n8n node.\nconst username = $input.first().json.Name;\n// @ts-ignore this comes from a previous n8n node.\nconst userage = $input.first().json.Age;\n\n// @ts-ignore n8n requires a return value.\nreturn { result: main(username, userage) };\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        -16
+      ],
+      "id": "ae9ae0b3-e9a0-488a-8c2d-d8a39fd2e07d",
+      "name": "Sample Code Node"
+    },
+    {
+      "parameters": {
+        "formTitle": "n8n Form Template",
+        "formDescription": "This is just a form template.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Name"
+            },
+            {
+              "fieldLabel": "Age",
+              "fieldType": "number",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        -208,
+        -16
+      ],
+      "id": "a0c4629e-7a10-4579-b8c5-9cb02954dac4",
+      "name": "On form submission",
+      "webhookId": "d10db215-c2c5-46bc-a8ce-94f8bd4277f7"
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Done",
+        "completionMessage": "={{ $json.result }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.3,
+      "position": [
+        208,
+        -16
+      ],
+      "id": "ecc9bab2-3ecf-4aa9-9150-1a81b12c4a46",
+      "name": "Form",
+      "webhookId": "58328fd7-d6c1-4dd6-8ce8-6756b7ff13be"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Sample Code Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sample Code Node": {
+      "main": [
+        [
+          {
+            "node": "Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d53c736d-5565-46ce-b87d-94ed08aaeed9",
+  "meta": {
+    "instanceId": "d3a7cf79eb4a246fe933cc979694a1777c838c2b02662fe2ce3c7cfa96454a58"
+  },
+  "id": "zjjHwXOWyrZElBsU",
+  "tags": []
+}
