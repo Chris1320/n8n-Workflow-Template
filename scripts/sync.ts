@@ -365,35 +365,44 @@ async function cmdPull(workflowId?: string): Promise<void> {
 }
 
 /**
- * Pushes a workflow from `workflows/<Workflow-Name>.json` to the live n8n instance.
+ * Bundles and pushes a single workflow to the live n8n instance.
  *
- * @param workflowName The name of the workflow to push.
- * @returns A promise that resolves when the workflow is pushed successfully.
+ * @param cleanName The sanitized workflow name.
+ * @returns A promise resolving to true if pushed, false if skipped or failed.
  */
-async function cmdPush(workflowName?: string): Promise<void> {
-  if (!workflowName) {
-    console.error(
-      "[ERROR] Workflow name is required for push.\nUsage: bun run push <workflow-name>",
-    );
-    process.exit(1);
+async function pushWorkflow(cleanName: string): Promise<boolean> {
+  const jsonPath = path.join(WORKFLOWS_DIR, `${cleanName}.json`);
+  let raw: string;
+  try {
+    raw = await fs.readFile(jsonPath, "utf-8");
+  } catch {
+    console.error(`[ERROR] Workflow file not found: workflows/${cleanName}.json`);
+    return false;
   }
 
-  const cleanName = workflowName.replace(/\.json$/, "");
+  let workflow: any;
+  try {
+    workflow = JSON.parse(raw);
+  } catch {
+    console.error(`[ERROR] Failed to parse workflows/${cleanName}.json`);
+    return false;
+  }
+
+  if (!workflow.id) {
+    console.warn(`[WARN] Skipping '${cleanName}': missing 'id' field in JSON.`);
+    return false;
+  }
+
   console.log(`Bundling '${cleanName}'...`);
   await bundleWorkflow(cleanName);
 
-  const jsonPath = path.join(WORKFLOWS_DIR, `${cleanName}.json`);
-  const raw = await fs.readFile(jsonPath, "utf-8");
-  const workflow = JSON.parse(raw);
-
-  if (!workflow.id) {
-    console.error(`[ERROR] '${cleanName}.json' is missing the 'id' field.`);
-    process.exit(1);
-  }
+  // Re-read JSON to get the latest bundled content
+  raw = await fs.readFile(jsonPath, "utf-8");
+  workflow = JSON.parse(raw);
 
   // Validate nodes
   const nodes: any[] = workflow.nodes || [];
-  console.log(`\nVerifying ${nodes.length} nodes in '${cleanName}'...`);
+  console.log(`Verifying ${nodes.length} node(s) in '${cleanName}'...`);
   for (const n of nodes) {
     if (n.type === "n8n-nodes-base.code") {
       const isPy = n.parameters?.language === "python";
@@ -410,7 +419,7 @@ async function cmdPush(workflowName?: string): Promise<void> {
   }
 
   console.log(
-    `\nPushing '${cleanName}' (${workflow.id}) to live n8n instance...`,
+    `Pushing '${cleanName}' (${workflow.id}) to live n8n instance...`,
   );
   const payload = {
     name: workflow.name,
@@ -419,12 +428,70 @@ async function cmdPush(workflowName?: string): Promise<void> {
     settings: workflow.settings || {},
   };
 
-  await apiRequest(`/workflows/${workflow.id}`, {
-    method: "PUT",
-    body: JSON.stringify(payload),
-  });
+  try {
+    await apiRequest(`/workflows/${workflow.id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+    console.log(`[PUSHED] Successfully updated '${cleanName}' on n8n.\n`);
+    return true;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[ERROR] Failed to push '${cleanName}': ${msg}\n`);
+    return false;
+  }
+}
 
-  console.log(`[PUSHED] Successfully updated '${cleanName}' on n8n.`);
+/**
+ * Pushes workflow(s) from `workflows/<Workflow-Name>.json` to the live n8n instance.
+ * If workflowName is omitted, pushes all workflows found in `workflows/`.
+ *
+ * @param workflowName Optional specific workflow name to push.
+ * @returns A promise that resolves when push operations complete.
+ */
+async function cmdPush(workflowName?: string): Promise<void> {
+  // Validate .env configuration first
+  await getEnvConfig();
+
+  if (workflowName) {
+    const cleanName = workflowName.replace(/\.json$/, "");
+    const success = await pushWorkflow(cleanName);
+    if (!success) {
+      process.exit(1);
+    }
+    return;
+  }
+
+  await fs.mkdir(WORKFLOWS_DIR, { recursive: true });
+  const entries = await fs.readdir(WORKFLOWS_DIR, { withFileTypes: true });
+  const workflowNames = entries
+    .filter((e) => e.isFile() && e.name.endsWith(".json"))
+    .map((e) => e.name.replace(/\.json$/, ""));
+
+  if (workflowNames.length === 0) {
+    console.log("No workflows found in workflows/ to push.");
+    return;
+  }
+
+  console.log(
+    `Found ${workflowNames.length} workflow(s) in workflows/. Pushing to n8n...\n`,
+  );
+  let pushed = 0;
+  let failed = 0;
+
+  for (const name of workflowNames) {
+    const success = await pushWorkflow(name);
+    if (success) {
+      pushed++;
+    } else {
+      failed++;
+    }
+  }
+
+  console.log(`Push completed: ${pushed} pushed, ${failed} skipped or failed.`);
+  if (failed > 0 && pushed === 0) {
+    process.exit(1);
+  }
 }
 
 /**

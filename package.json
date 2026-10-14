@@ -11,8 +11,8 @@
     "type-check:py": "uv run basedpyright src"
   },
   "devDependencies": {
-    "@types/bun": "latest",
-    "@types/node": "^22.0.0",
+    "@types/bun": "^1.4.3",
+    "@types/node": "^26.6.5",
     "globals": "^17.13.0",
     "typescript": "^7.0.2",
     "typescript-eslint": "^8.71.2"

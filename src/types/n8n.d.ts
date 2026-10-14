@@ -34,6 +34,7 @@ declare namespace n8n {
 }
 
 declare const $input: n8n.InputNode;
+declare function $(nodeName: string): n8n.InputNode;
 declare const $json: Record<string, any>;
 declare const $node: Record<string, any>;
 declare const $prevNode: Record<string, any>;

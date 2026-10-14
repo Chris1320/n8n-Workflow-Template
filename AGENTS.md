@@ -34,7 +34,8 @@ bun run bundle "Workflow Name"    # Bundles specific workflow
 # Remote API Sync (requires .env with N8N_URL and N8N_API_KEY)
 bun run pull                      # List available remote workflows
 bun run pull <workflow-id>        # Fetch workflow and dissect into src/
-bun run push "<Workflow Name>"    # Bundle, verify, and update live n8n
+bun run push                      # Bundle, verify, and push all workflows
+bun run push "Workflow Name"      # Bundle, verify, and push specific workflow
 
 # Python linting and type-checking (optional/if python nodes are present)
 uv run ruff check src             # Ruff lint (target: py310, line-length: 120)

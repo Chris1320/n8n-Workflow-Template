@@ -89,15 +89,16 @@ N8N_API_KEY=n8n_api_your_key_here
    bun run type-check
    ```
 
-5. **Push**: Bundle and update the live workflow directly on your n8n instance:
+5. **Push**: Bundle and update live workflow(s) on your n8n instance:
 
    ```bash
-   bun run push "My Workflow"
+   bun run push                     # Pushes all workflows found in workflows/
+   bun run push "My Workflow"       # Pushes a specific workflow
    ```
 
 6. **Test**: Execute and verify the workflow on your n8n canvas.
 7. **Iterate**:
-   - **When writing code**: Simply edit $\rightarrow$ `bun run push "My Workflow"` $\rightarrow$ test.
+   - **When writing code**: Simply edit > `bun run push` (or `bun run push "My Workflow"`) > test.
    - **When modifying canvas nodes**: Run `bun run pull <workflow-id>` to re-dissect the updated workflow.
 
 ---
@@ -195,12 +196,12 @@ Operates purely on local files without connecting to an n8n instance.
 
 ## Commands Summary
 
-| Command                         | Description                                                               |
-| ------------------------------- | ------------------------------------------------------------------------- |
-| `bun run extract [wf] [--keep]` | Dissects `workflows/*.json` into `src/<Workflow-Name>/`                   |
-| `bun run bundle [wf]`           | Injects code from `src/<Workflow-Name>/` back into `workflows/*.json`     |
-| `bun run type-check`            | Runs both JavaScript/TypeScript and Python type-checkers                  |
-| `bun run type-check:js`         | Runs `tsc` to validate all JavaScript/TypeScript files                    |
-| `bun run type-check:py`         | Runs `basedpyright src` to validate Python code nodes                     |
-| `bun run pull [id]`             | _(Optional)_ Pulls workflow from live n8n instance and dissects it        |
-| `bun run push <wf>`             | _(Optional)_ Bundles, verifies, and updates live workflow on n8n instance |
+| Command                         | Description                                                                  |
+| ------------------------------- | ---------------------------------------------------------------------------- |
+| `bun run extract [wf] [--keep]` | Dissects `workflows/*.json` into `src/<Workflow-Name>/`                      |
+| `bun run bundle [wf]`           | Injects code from `src/<Workflow-Name>/` back into `workflows/*.json`        |
+| `bun run type-check`            | Runs both JavaScript/TypeScript and Python type-checkers                     |
+| `bun run type-check:js`         | Runs `tsc` to validate all JavaScript/TypeScript files                       |
+| `bun run type-check:py`         | Runs `basedpyright src` to validate Python code nodes                        |
+| `bun run pull [id]`             | _(Optional)_ Pulls workflow from live n8n instance and dissects it           |
+| `bun run push [wf]`             | _(Optional)_ Bundles, verifies, and updates live workflow(s) on n8n instance |
