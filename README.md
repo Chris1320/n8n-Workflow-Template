@@ -11,8 +11,8 @@ and zero manual copy-pasting.
 Editing JavaScript, Python, and HTML templates inside n8n's web canvas lacks essential developer conveniences:
 autocomplete, linters, jump-to-definition, and strict type checking.
 
-This environment bridges that gap by letting you author code directly in local files with full LSP support and synchronize
-them with workflow JSONs on demand.
+This environment bridges that gap by letting you author code directly in local files with full LSP support and
+synchronize them with workflow JSONs on demand.
 
 It supports two modes:
 
@@ -38,6 +38,23 @@ uv sync
 
 ## Development Workflows
 
+> [!WARNING]
+> **Check Workflow JSON Files for Sensitive Data Before Committing**
+>
+> Exported or pulled workflow files (`workflows/*.json`) may contain sensitive information:
+>
+> - **Pinned Execution Data (`pinData`)**: Test data pinned to canvas nodes is serialized directly into the JSON
+>   definition. This can expose live production database rows, bearer tokens, customer PII, or webhook payloads.
+> - **Credential Identifiers**: While passwords and private keys remain securely encrypted on your n8n instance,
+>   node definitions export internal credential IDs and human-readable account labels (e.g.
+>   `"credentials": { "postgres": { "id": "1", "name": "Production DB" } }`), exposing internal infrastructure
+>   naming conventions.
+> - **Hardcoded Parameters**: Static API tokens, auth headers, or webhook query secrets placed directly into node
+>   parameters will be stored in plaintext.
+>
+> **Best Practice**: Unpin test data on the n8n canvas before exporting, and confirm that `"pinData": {}` is empty
+> before committing workflow JSON files to version control.
+
 ### Mode 1: Connected / API-Driven (Recommended)
 
 Directly synchronizes code between your local editor and a running n8n instance.
@@ -48,11 +65,14 @@ Directly synchronizes code between your local editor and a running n8n instance.
 2. **Create Key**: Click **Create an API key** (or **Create API key**).
 3. **Label & Expiration**: Enter a recognizable label (e.g., `n8n-code-sync`) and select an expiration timeframe.
 4. **Permissions & Scopes**:
-   - **Community / Self-Hosted / Standard Plans**: API keys automatically inherit the full permissions of the user account. No scope selection is required.
+   - **Community / Self-Hosted / Standard Plans**: API keys automatically inherit the full permissions of the user
+     account. No scope selection is required.
    - **Enterprise / RBAC Plans**: Grant the following minimum scopes to adhere to least privilege:
      - `workflow:read` (**Workflow: Read**) — Required to list remote workflows and pull definitions (`bun run pull`).
-     - `workflow:update` (**Workflow: Update**) — Required to bundle and push modified node code back to canvas (`bun run push`).
-     - _(Optional)_ `workflow:create` and `workflow:activate` if you plan to programmatically create or publish workflows.
+     - `workflow:update` (**Workflow: Update**) — Required to bundle and push modified node code back to canvas
+       (`bun run push`).
+     - _(Optional)_ `workflow:create` and `workflow:activate` if you plan to programmatically create or publish
+       workflows.
 5. **Save & Copy**: Save and copy the generated key immediately (it is only shown once).
 
 #### Environment Configuration
@@ -70,7 +90,8 @@ N8N_URL=https://n8n.example.com
 N8N_API_KEY=n8n_api_your_key_here
 ```
 
-> **Note**: Both `N8N_URL` (without trailing slash) and `N8N_API_KEY` must be defined in `.env`. Ambient system environment variables are ignored to avoid accidental modifications across environments.
+> **Note**: Both `N8N_URL` (without trailing slash) and `N8N_API_KEY` must be defined in `.env`. Ambient system
+> environment variables are ignored to avoid accidental modifications across environments.
 
 #### API-Driven Step-by-Step Lifecycle
 
@@ -110,7 +131,8 @@ Operates purely on local files without connecting to an n8n instance.
 
 #### File-First Step-by-Step Lifecycle
 
-1. **Paste JSON**: Export your workflow from the n8n canvas and place it into `workflows/<Workflow-Name>.json`.
+1. **Paste JSON**: Export your workflow from the n8n canvas and place it into `workflows/<Workflow-Name>.json`
+   (ensure pinned test data is cleared).
 2. **Dissect**: Extract all code and HTML nodes into local files:
 
    ```bash
