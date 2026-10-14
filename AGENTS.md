@@ -32,8 +32,9 @@ bun run bundle                    # Bundles all workflows
 bun run bundle "Workflow Name"    # Bundles specific workflow
 
 # Remote API Sync (requires .env with N8N_URL and N8N_API_KEY)
-bun run pull                      # List available remote workflows
-bun run pull <workflow-id>        # Fetch workflow and dissect into src/
+bun run pull                      # Pull latest version of tracked workflows
+bun run pull <workflow-id>        # Fetch new workflow and dissect into src/
+bun run pull --list               # List available remote workflows on n8n
 bun run push                      # Bundle, verify, and push all workflows
 bun run push "Workflow Name"      # Bundle, verify, and push specific workflow
 

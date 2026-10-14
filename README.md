@@ -78,8 +78,9 @@ N8N_API_KEY=n8n_api_your_key_here
 2. **Pull**: Fetch the workflow and dissect it into your repository:
 
    ```bash
-   bun run pull                     # Lists available workflows
-   bun run pull <workflow-id>       # Pulls and auto-dissects into src/<Workflow-Name>/
+   bun run pull                     # Refreshes all tracked workflows from n8n
+   bun run pull <workflow-id>       # Pulls and auto-dissects a new workflow
+   bun run pull --list              # Lists available workflows on remote instance
    ```
 
 3. **Edit**: Modify code and template files in `src/<Workflow-Name>/` using Neovim, VS Code, etc.
@@ -203,5 +204,5 @@ Operates purely on local files without connecting to an n8n instance.
 | `bun run type-check`            | Runs both JavaScript/TypeScript and Python type-checkers                     |
 | `bun run type-check:js`         | Runs `tsc` to validate all JavaScript/TypeScript files                       |
 | `bun run type-check:py`         | Runs `basedpyright src` to validate Python code nodes                        |
-| `bun run pull [id]`             | _(Optional)_ Pulls workflow from live n8n instance and dissects it           |
+| `bun run pull [id]`             | _(Optional)_ Pulls latest tracked workflows from n8n (or specific workflow)  |
 | `bun run push [wf]`             | _(Optional)_ Bundles, verifies, and updates live workflow(s) on n8n instance |

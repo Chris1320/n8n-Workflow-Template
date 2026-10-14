@@ -331,37 +331,159 @@ async function cmdBundle(targetName?: string): Promise<void> {
 }
 
 /**
- * Pulls a workflow from the n8n instance and saves it to `workflows/<Workflow-Name>.json`.
+ * Pulls a single workflow by ID from the n8n instance and dissects it.
  *
- * @param workflowId Optional specific workflow ID to pull. If not provided, lists available workflows.
- * @returns A promise that resolves when the workflow is pulled and saved.
+ * @param workflowId The remote workflow ID.
+ * @param preferredName Optional local workflow name to use for saving.
+ * @returns A promise resolving to true if pulled successfully, false otherwise.
  */
-async function cmdPull(workflowId?: string): Promise<void> {
-  if (!workflowId) {
-    console.log("Fetching workflows list from n8n instance...");
-    const res = await apiRequest("/workflows");
-    const workflows: any[] = res.data || [];
-    if (workflows.length === 0) {
-      console.log("No workflows found on the remote instance.");
-      return;
-    }
-    console.log("\nAvailable workflows on n8n:");
-    workflows.forEach((w) => console.log(` - [${w.id}] ${w.name}`));
-    console.log("\nUsage: bun run pull <workflow-id>");
+async function pullWorkflowById(
+  workflowId: string,
+  preferredName?: string,
+): Promise<boolean> {
+  console.log(`Pulling workflow '${workflowId}' from n8n...`);
+  try {
+    const data = await apiRequest(`/workflows/${workflowId}`);
+    const workflowName = (
+      preferredName ||
+      data.name ||
+      `workflow-${workflowId}`
+    ).trim();
+    const jsonPath = path.join(WORKFLOWS_DIR, `${workflowName}.json`);
+
+    await fs.mkdir(WORKFLOWS_DIR, { recursive: true });
+    await fs.writeFile(jsonPath, JSON.stringify(data, null, 2) + "\n", "utf-8");
+    console.log(`[PULLED] Saved to workflows/${workflowName}.json`);
+
+    console.log(`Dissecting '${workflowName}'...`);
+    await extractWorkflow(jsonPath, false);
+    console.log("");
+    return true;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[ERROR] Failed to pull workflow '${workflowId}': ${msg}\n`);
+    return false;
+  }
+}
+
+/**
+ * Lists available remote workflows on the live n8n instance.
+ *
+ * @returns A promise that resolves when listing is complete.
+ */
+async function listRemoteWorkflows(): Promise<void> {
+  console.log("Fetching workflows list from n8n instance...");
+  const res = await apiRequest("/workflows");
+  const workflows: any[] = res.data || [];
+  if (workflows.length === 0) {
+    console.log("No workflows found on the remote instance.");
+    return;
+  }
+  console.log("\nAvailable workflows on n8n:");
+  workflows.forEach((w) => console.log(` - [${w.id}] ${w.name}`));
+  console.log("\nUsage: bun run pull <workflow-id>");
+}
+
+/**
+ * Pulls workflow(s) from the live n8n instance.
+ * If target is omitted, refreshes all workflows already tracked in `workflows/`.
+ * If target is "--list" or "-l", lists all remote workflows.
+ * If target is a workflow name or ID, pulls that specific workflow.
+ *
+ * @param target Optional workflow ID, name, or "--list" flag.
+ * @returns A promise that resolves when pull operations complete.
+ */
+async function cmdPull(target?: string): Promise<void> {
+  // Validate .env configuration first
+  await getEnvConfig();
+
+  if (target === "--list" || target === "-l") {
+    await listRemoteWorkflows();
     return;
   }
 
-  console.log(`Pulling workflow ${workflowId} from n8n...`);
-  const data = await apiRequest(`/workflows/${workflowId}`);
-  const workflowName = (data.name || `workflow-${workflowId}`).trim();
-  const jsonPath = path.join(WORKFLOWS_DIR, `${workflowName}.json`);
+  if (target) {
+    const cleanName = target.replace(/\.json$/, "");
+    const localJsonPath = path.join(WORKFLOWS_DIR, `${cleanName}.json`);
+    let targetId = target;
+    let preferredName: string | undefined = undefined;
 
+    try {
+      const raw = await fs.readFile(localJsonPath, "utf-8");
+      const parsed = JSON.parse(raw);
+      if (parsed.id) {
+        targetId = parsed.id;
+        preferredName = cleanName;
+      }
+    } catch {
+      // Not an existing local file name; treat target as workflow ID directly
+    }
+
+    const success = await pullWorkflowById(targetId, preferredName);
+    if (!success) {
+      process.exit(1);
+    }
+    return;
+  }
+
+  // No argument: pull latest version of all workflows currently in workflows/
   await fs.mkdir(WORKFLOWS_DIR, { recursive: true });
-  await fs.writeFile(jsonPath, JSON.stringify(data, null, 2) + "\n", "utf-8");
-  console.log(`[PULLED] Saved to workflows/${workflowName}.json`);
+  const entries = await fs.readdir(WORKFLOWS_DIR, { withFileTypes: true });
+  const jsonFiles = entries
+    .filter((e) => e.isFile() && e.name.endsWith(".json"))
+    .map((e) => e.name);
 
-  console.log(`\nDissecting '${workflowName}'...`);
-  await extractWorkflow(jsonPath, false);
+  if (jsonFiles.length === 0) {
+    console.log("No workflows found in workflows/ to refresh.");
+    console.log("Discovering available workflows on remote instance...\n");
+    await listRemoteWorkflows();
+    return;
+  }
+
+  const trackedWorkflows: { name: string; id: string }[] = [];
+  for (const file of jsonFiles) {
+    const filePath = path.join(WORKFLOWS_DIR, file);
+    try {
+      const raw = await fs.readFile(filePath, "utf-8");
+      const parsed = JSON.parse(raw);
+      const name = path.basename(file, ".json");
+      if (parsed.id) {
+        trackedWorkflows.push({ name, id: parsed.id });
+      } else {
+        console.warn(`[WARN] Skipping '${file}': missing 'id' field in JSON.`);
+      }
+    } catch {
+      console.warn(`[WARN] Skipping '${file}': failed to read or parse JSON.`);
+    }
+  }
+
+  if (trackedWorkflows.length === 0) {
+    console.log("No tracked workflows with remote IDs found in workflows/.");
+    console.log("Discovering available workflows on remote instance...\n");
+    await listRemoteWorkflows();
+    return;
+  }
+
+  console.log(
+    `Found ${trackedWorkflows.length} tracked workflow(s) in workflows/. Fetching latest versions from n8n...\n`,
+  );
+
+  let pulled = 0;
+  let failed = 0;
+
+  for (const wf of trackedWorkflows) {
+    const success = await pullWorkflowById(wf.id, wf.name);
+    if (success) {
+      pulled++;
+    } else {
+      failed++;
+    }
+  }
+
+  console.log(`Pull completed: ${pulled} updated, ${failed} failed.`);
+  if (failed > 0 && pulled === 0) {
+    process.exit(1);
+  }
 }
 
 /**
@@ -376,7 +498,9 @@ async function pushWorkflow(cleanName: string): Promise<boolean> {
   try {
     raw = await fs.readFile(jsonPath, "utf-8");
   } catch {
-    console.error(`[ERROR] Workflow file not found: workflows/${cleanName}.json`);
+    console.error(
+      `[ERROR] Workflow file not found: workflows/${cleanName}.json`,
+    );
     return false;
   }
 
