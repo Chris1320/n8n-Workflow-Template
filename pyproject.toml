@@ -1,0 +1,25 @@
+[project]
+name = "n8n-workflow-template"
+version = "0.1.0"
+description = "Code-first n8n workflow development template with Python and TypeScript support"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "UP", "I"]
+
+[tool.basedpyright]
+typeCheckingMode = "standard"
+pythonVersion = "3.10"
+include = ["src"]
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.40.2",
+    "ruff>=0.17.0",
+]

@@ -1,10 +1,20 @@
 {
-    "scripts": {
-        "type-check": "tsc"
-    },
-    "devDependencies": {
-        "globals": "^17.0.0",
-        "typescript": "^5.9.3",
-        "typescript-eslint": "^8.53.0"
-    }
+  "name": "n8n-workflow-template",
+  "description": "Template repository for code-first n8n workflow development with LSP and TypeScript support",
+  "scripts": {
+    "extract": "bun scripts/sync.ts extract",
+    "bundle": "bun scripts/sync.ts bundle",
+    "pull": "bun scripts/sync.ts pull",
+    "push": "bun scripts/sync.ts push",
+    "type-check": "bun run type-check:js && bun run type-check:py",
+    "type-check:js": "tsc",
+    "type-check:py": "uv run basedpyright src"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^22.0.0",
+    "globals": "^17.13.0",
+    "typescript": "^7.0.2",
+    "typescript-eslint": "^8.71.2"
+  }
 }

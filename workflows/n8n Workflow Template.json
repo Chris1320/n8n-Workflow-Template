@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "jsCode": "/**\n * Print a message with a name and age.\n * @param {string} name A name.\n * @param {number} age An age.\n * @returns {string} A message containing the name and age.\n */\nfunction main(name, age) {\n    const /** @type {import(\"./types/SampleCodeTypes\").Person} */ person = { name: name, age: age };\n    const /** @type {string} */ result = `${person.name} is ${person.age} years old.`;\n    return result;\n}\n\n// @ts-ignore this comes from a previous n8n node.\nconst username = $input.first().json.Name;\n// @ts-ignore this comes from a previous n8n node.\nconst userage = $input.first().json.Age;\n\n// @ts-ignore n8n requires a return value.\nreturn { result: main(username, userage) };\n"
+        "jsCode": "/**\n * Print a message with a name and age.\n *\n * @param {string} name A name.\n * @param {number} age An age.\n * @returns {string} A message containing the name and age.\n */\nfunction main(name, age) {\n  // NOTE: We use JSDoc type annotations so that it will not throw an error in n8n,\n  // which does not support TypeScript syntax without complex configuration.\n  const /** @type {import(\"../types/SampleCodeTypes\").Person} */ person = {\n      name: name,\n      age: age,\n    };\n  const /** @type {string} */ result = `${person.name} is ${person.age} years old.`;\n  return result;\n}\n\n// Global $input is declared in src/types/n8n.d.ts (no @ts-ignore needed!)\nconst username = $input.first().json.Name;\nconst userage = $input.first().json.Age;\n\n// @ts-ignore Top-level return in n8n execution scope\nreturn { result: main(username, userage) };\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,

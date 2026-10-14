@@ -1,14 +1,20 @@
 {
-    "compilerOptions": {
-        "forceConsistentCasingInFileNames": true,
-        "target": "es6",
-
-        /* JavaScript Support */
-        "checkJs": true /*  Implicitly sets `allowJs: true` */,
-        "noEmit": true,
-        "strict": true,
-        "skipLibCheck": true /* Skip type checking all .d.ts files. */,
-        "moduleDetection": "force" /* Do not import other files unless they have import/export statements. */
-    },
-    "include": ["src/*.js", "src/types/**/*.ts"]
+  "compilerOptions": {
+    "forceConsistentCasingInFileNames": true,
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "moduleDetection": "force"
+  },
+  "include": [
+    "src/**/*.js",
+    "src/types/**/*.ts",
+    "src/types/**/*.d.ts",
+    "scripts/**/*.ts",
+    "scripts/**/*.d.ts"
+  ]
 }
