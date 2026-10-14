@@ -27,7 +27,11 @@ It supports two modes:
 ### 1. Install Dependencies
 
 ```bash
+# Install JavaScript / TypeScript dependencies and sync scripts
 bun install
+
+# (Optional) Initialize Python virtual environment if using Python code nodes
+uv sync
 ```
 
 ---
@@ -36,41 +40,65 @@ bun install
 
 ### Mode 1: Connected / API-Driven (Recommended)
 
-Requires a one-time configuration of `N8N_URL` and `N8N_API_KEY` in `.env`.
+Directly synchronizes code between your local editor and a running n8n instance.
+
+#### Acquiring an n8n API Key & Scopes
+
+1. **Open API Settings**: In your n8n dashboard, click `Settings > n8n API`.
+2. **Create Key**: Click **Create an API key** (or **Create API key**).
+3. **Label & Expiration**: Enter a recognizable label (e.g., `n8n-code-sync`) and select an expiration timeframe.
+4. **Permissions & Scopes**:
+   - **Community / Self-Hosted / Standard Plans**: API keys automatically inherit the full permissions of the user account. No scope selection is required.
+   - **Enterprise / RBAC Plans**: Grant the following minimum scopes to adhere to least privilege:
+     - `workflow:read` (**Workflow: Read**) — Required to list remote workflows and pull definitions (`bun run pull`).
+     - `workflow:update` (**Workflow: Update**) — Required to bundle and push modified node code back to canvas (`bun run push`).
+     - _(Optional)_ `workflow:create` and `workflow:activate` if you plan to programmatically create or publish workflows.
+5. **Save & Copy**: Save and copy the generated key immediately (it is only shown once).
+
+#### Environment Configuration
+
+Create a `.env` file in the project root:
 
 ```bash
 cp .env.example .env
-# Edit .env with your instance URL and API key
 ```
 
-#### Step-by-Step Lifecycle
+Configure your instance connection:
+
+```env
+N8N_URL=https://n8n.example.com
+N8N_API_KEY=n8n_api_your_key_here
+```
+
+> **Note**: Both `N8N_URL` (without trailing slash) and `N8N_API_KEY` must be defined in `.env`. Ambient system environment variables are ignored to avoid accidental modifications across environments.
+
+#### API-Driven Step-by-Step Lifecycle
 
 1. **Create workflow**: Create your workflow structure on the n8n canvas.
-2. **Configure `.env`** *(one-time)*: Add `N8N_URL` and `N8N_API_KEY`.
-3. **Pull**: Fetch the workflow and dissect it into your repository:
+2. **Pull**: Fetch the workflow and dissect it into your repository:
 
    ```bash
    bun run pull                     # Lists available workflows
    bun run pull <workflow-id>       # Pulls and auto-dissects into src/<Workflow-Name>/
    ```
 
-4. **Edit**: Modify code and template files in `src/<Workflow-Name>/` using Neovim, VS Code, etc.
-5. **Type-check**: Validate your JavaScript/TypeScript:
+3. **Edit**: Modify code and template files in `src/<Workflow-Name>/` using Neovim, VS Code, etc.
+4. **Type-check**: Validate your JavaScript/TypeScript and Python code:
 
    ```bash
    bun run type-check
    ```
 
-6. **Push**: Bundle and update the live workflow directly on your n8n instance:
+5. **Push**: Bundle and update the live workflow directly on your n8n instance:
 
    ```bash
    bun run push "My Workflow"
    ```
 
-7. **Test**: Execute and verify the workflow on your n8n canvas.
-8. **Iterate**:
-   * **When writing code**: Simply edit $\rightarrow$ `bun run push "My Workflow"` $\rightarrow$ test.
-   * **When modifying canvas nodes**: Run `bun run pull <workflow-id>` to re-dissect the updated workflow.
+6. **Test**: Execute and verify the workflow on your n8n canvas.
+7. **Iterate**:
+   - **When writing code**: Simply edit $\rightarrow$ `bun run push "My Workflow"` $\rightarrow$ test.
+   - **When modifying canvas nodes**: Run `bun run pull <workflow-id>` to re-dissect the updated workflow.
 
 ---
 
@@ -78,7 +106,7 @@ cp .env.example .env
 
 Operates purely on local files without connecting to an n8n instance.
 
-#### Step-by-Step Lifecycle
+#### File-First Step-by-Step Lifecycle
 
 1. **Paste JSON**: Export your workflow from the n8n canvas and place it into `workflows/<Workflow-Name>.json`.
 2. **Dissect**: Extract all code and HTML nodes into local files:
@@ -104,8 +132,8 @@ Operates purely on local files without connecting to an n8n instance.
 
 6. **Import & Test**: Import the updated `workflows/<Workflow-Name>.json` back into the n8n canvas and test.
 7. **Iterate**:
-   * **When writing code**: Edit $\rightarrow$ `bun run bundle` $\rightarrow$ re-import JSON to n8n canvas.
-   * **When modifying canvas nodes**: Export new JSON $\rightarrow$ paste into `workflows/` $\rightarrow$ `bun run extract`.
+   - **When writing code**: Edit > `bun run bundle` > re-import JSON to n8n canvas.
+   - **When modifying canvas nodes**: Export new JSON > paste into `workflows/` > `bun run extract`.
 
 ---
 
@@ -113,15 +141,15 @@ Operates purely on local files without connecting to an n8n instance.
 
 ### JavaScript Code Nodes
 
-* Ambient type definitions in [`src/types/n8n.d.ts`](src/types/n8n.d.ts) declare `$input`, `$json`, `$prevNode`,
+- Ambient type definitions in [`src/types/n8n.d.ts`](src/types/n8n.d.ts) declare `$input`, `$json`, `$prevNode`,
   `$workflow`, and Luxon's `DateTime` globally.
-* You do **not** need `// @ts-ignore` for n8n runtime variables—you get native autocomplete:
+- You do **not** need `// @ts-ignore` for n8n runtime variables—you get native autocomplete:
 
   ```javascript
   const name = $input.first().json.Name;
   ```
 
-* Custom interfaces can be defined in `src/types/*.ts` and imported via standard JSDoc:
+- Custom interfaces can be defined in `src/types/*.ts` and imported via standard JSDoc:
 
   ```javascript
   /** @type {import("../types/SampleCodeTypes").Person} */
@@ -130,14 +158,14 @@ Operates purely on local files without connecting to an n8n instance.
 
 ### Python Code Nodes
 
-* Python type stubs in [`src/types/n8n.pyi`](src/types/n8n.pyi) declare `_input`, `_json`, `_node`, etc.
-* Pyright, Pylance, and Ruff will recognize `_input.first().json` and `_input.all()` without undefined variable errors.
-* Python tooling is configured via `pyproject.toml` using `uv`.
+- Python type stubs in [`src/types/n8n.pyi`](src/types/n8n.pyi) declare `_input`, `_json`, `_node`, etc.
+- Pyright, Pylance, and Ruff will recognize `_input.first().json` and `_input.all()` without undefined variable errors.
+- Python tooling is configured via `pyproject.toml` using `uv`.
 
 ### HTML & Email Nodes
 
-* HTML bodies and email templates reside directly in `src/<Workflow-Name>/`.
-* Format and lint them using Prettier or your editor's HTML LSP without escaping quotes or breaking JSON structures.
+- HTML bodies and email templates reside directly in `src/<Workflow-Name>/`.
+- Format and lint them using Prettier or your editor's HTML LSP without escaping quotes or breaking JSON structures.
 
 ---
 
@@ -167,12 +195,12 @@ Operates purely on local files without connecting to an n8n instance.
 
 ## Commands Summary
 
-| Command | Description |
-| --- | --- |
-| `bun run extract [wf] [--keep]` | Dissects `workflows/*.json` into `src/<Workflow-Name>/` |
-| `bun run bundle [wf]` | Injects code from `src/<Workflow-Name>/` back into `workflows/*.json` |
-| `bun run type-check` | Runs both JavaScript/TypeScript and Python type-checkers |
-| `bun run type-check:js` | Runs `tsc` to validate all JavaScript/TypeScript files |
-| `bun run type-check:py` | Runs `basedpyright src` to validate Python code nodes |
-| `bun run pull [id]` | *(Optional)* Pulls workflow from live n8n instance and dissects it |
-| `bun run push <wf>` | *(Optional)* Bundles, verifies, and updates live workflow on n8n instance |
+| Command                         | Description                                                               |
+| ------------------------------- | ------------------------------------------------------------------------- |
+| `bun run extract [wf] [--keep]` | Dissects `workflows/*.json` into `src/<Workflow-Name>/`                   |
+| `bun run bundle [wf]`           | Injects code from `src/<Workflow-Name>/` back into `workflows/*.json`     |
+| `bun run type-check`            | Runs both JavaScript/TypeScript and Python type-checkers                  |
+| `bun run type-check:js`         | Runs `tsc` to validate all JavaScript/TypeScript files                    |
+| `bun run type-check:py`         | Runs `basedpyright src` to validate Python code nodes                     |
+| `bun run pull [id]`             | _(Optional)_ Pulls workflow from live n8n instance and dissects it        |
+| `bun run push <wf>`             | _(Optional)_ Bundles, verifies, and updates live workflow on n8n instance |
